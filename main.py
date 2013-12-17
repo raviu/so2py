@@ -35,27 +35,29 @@ import settings
 class Main:
 
     code_base_path = '.'
+    context = {}
             
-    def __init__(self, settings):
+    def __init__(self, settings, path):
         print "Running Managment Tools v%s" % __version__ 
         sys.path.append(os.path.realpath(__file__)+'/modules/')
+        self.context = {'path': path, 'success': True}
         self.code_base_path = settings.repo_location
         self.run(settings.run_order)
         
     
     def run(self, run_order):
-        success = True       
         for component in run_order:                         
             _module = __import__('modules.%s' % component, globals(), locals(), [component], -1)
             component_class = getattr(_module, component)
-            component_object = component_class(success)
+            component_object = component_class(self.context)
 
             print 'Running %s' % component + ' component v%s' % component_object.get_version()
 
-            success = component_object.run()
-            if not success:
+            self.context = component_object.run()
+            print self.context
+            if not self.context['success']:
                 print "Failed to complete %s" % component + " run" 
                
 
-
-main = Main(settings)
+path = sys.argv[1] 
+main = Main(settings, path)

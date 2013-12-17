@@ -7,7 +7,7 @@ class Test2:
         
 
     def run(self):
-        return False
+        return {"success": True}
 
     def get_version(self):
         return __version__
