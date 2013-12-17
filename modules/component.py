@@ -28,9 +28,17 @@ def is_released_component(file_path):
         component_pom = ET.parse('pom.xml')
         component_artifact_id = component_pom.xpath('/p:project/p:artifactId', namespaces={'p': 'http://maven.apache.org/POM/4.0.0'})
         component_version = component_pom.xpath('/p:project/p:version', namespaces={'p': 'http://maven.apache.org/POM/4.0.0'})
-        component_parent_artifact_id = component_pom.xpath('/p:project/p:parent/p:artifactId', namespaces={'p': 'http://maven.apache.org/POM/4.0.0'})
+        #component_parent_artifact_id = component_pom.xpath('/p:project/p:parent/p:artifactId', namespaces={'p': 'http://maven.apache.org/POM/4.0.0'})
         component_parent_version = component_pom.xpath('/p:project/p:parent/p:version', namespaces={'p': 'http://maven.apache.org/POM/4.0.0'})
+        compoenet_parent_rpath = feature_pom.xpath('/p:project/p:parent/p:relativePath', namespaces={'p': 'http://maven.apache.org/POM/4.0.0'})
 
+        # This is becuase we really can't say parent artifactId is similar to its folder name
+        if compoenet_parent_rpath:
+            os.chdir(compoenet_parent_rpath[0].text.rpartition('/')[0])
+            compoenet_parent_rpath = os.path.abspath('.')
+        else:
+            raise Exception()
+            
         if not component_version:
             component_version = component_parent_version
 
@@ -62,7 +70,10 @@ def is_released_component(file_path):
             for chunk in os.listdir("."):
                 os.chdir("./{0}/components".format(chunk))
                 chunk_component_pom = ET.parse('pom.xml')
-                module = chunk_component_pom.xpath("//p:modules/p:module[re:match(text(), '{0}$')]".format(component_parent_artifact_id[0].text),\
+
+                component_parent_chunk_path = feature_parent_rpath.replace('/media/shafreen/source/public/turing-new', '../../..')
+                
+                module = chunk_component_pom.xpath("//p:modules/p:module[re:match(text(), '{0}$')]".format(component_parent_chunk_path),\
                                       namespaces={'p': 'http://maven.apache.org/POM/4.0.0', 're': 'http://exslt.org/regular-expressions'})
 
                 if module:
@@ -82,7 +93,7 @@ def is_released_component(file_path):
             logging.info("{0}_{1} -> ".format(component_artifact_id[0].text, component_version[0].text) + released_chunk)
             return component_version[0].text
         else:
-            logging.info("{0}_{1} -> ".format("Not a released COMPONENT"))
+            logging.info("{0}_{1} -> ".format(component_artifact_id[0].text, component_version[0].text) + "Not a released COMPONENT")
             return None
     except KeyboardInterrupt:
         logging.error('You cancled the is_released_component is operation. You might have to manually reset the state of platform. !!!')

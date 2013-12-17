@@ -14,9 +14,7 @@ ch.setLevel(logging.INFO)
 ch.setFormatter(logging.Formatter('%(asctime)s: %(levelname)s: %(message)s'))
 logging.getLogger().addHandler(ch)
 
-dependent_projects = set([])
-
-def find_dependent_features(component_artifact_id):
+def find_dependent_features(component_artifact_id, dependent_projects):
 
     current_path = os.path.abspath('.')
     
@@ -30,14 +28,14 @@ def find_dependent_features(component_artifact_id):
         if 'src' in subFolders:
           subFolders.remove('src')
 
-        #if 'test' in subFolders:
-        #  subFolders.remove('test')
-
         if 'resources' in subFolders:
           subFolders.remove('resources')
 
         if 'nested-categories' in subFolders:
             subFolders.remove('nested-categories')
+
+        if 'repository' in subFolders:
+            subFolders.remove('repository')
 
         for file_name in files:
             if file_name == 'pom.xml':
@@ -50,8 +48,8 @@ def find_dependent_features(component_artifact_id):
 
         os.chdir(current_path)
 
-def refactor_depenedent_result():
-    ''' Take care of older versions in the result list.'''
+def refactor_depenedent_result(dependent_projects):
+    ''' Take care of older versions in the result set.'''
     
     project_dic = {}
     project_path_set = set([])
@@ -76,8 +74,8 @@ def refactor_depenedent_result():
     return project_path_set
 
 def is_released_feature(file_path):
-    ''' finds if a particular component is released or not. Implemenation is based on chunk-system
-            If the component is released it returns the component version.'''
+    ''' finds if a particular feature is released or not. Implemenation is based on chunk-system
+            If the component is released it returns the feature version.'''
 
     try:    
         os.chdir(file_path)
@@ -157,8 +155,9 @@ def is_released_feature(file_path):
         logging.error("Unexpected error:", sys.exc_info()[0])
         raise
 
-def create_new_feature(file_path, feature_version, component_artifact_id, component_artifact_version):
-    ''' If the component is released this operation will create a new component '''
+def create_new_feature(file_path, feature_version):
+    ''' If the feature is released this operation will create a new feature and returen the path
+            to the new feature if not it returns the existing features path.'''
             
     if feature_version is not None:
         os.chdir(file_path)
@@ -196,23 +195,21 @@ def create_new_feature(file_path, feature_version, component_artifact_id, compon
 
                 # Update the pom file..WHAT IF THERE IS NO VERSION ELEMENT ???
                 feature_version = feature_pom.xpath('/p:project/p:version', namespaces={'p': 'http://maven.apache.org/POM/4.0.0'})
-                feature_version[0].text = new_feature_version
 
-                feature_component_dependency = feature_pom.xpath("/p:project/p:dependencies/p:dependency/p:artifactId[re:match(text(), '{0}$')]".format(component_artifact_id),\
-                                        namespaces={'p': 'http://maven.apache.org/POM/4.0.0', 're': 'http://exslt.org/regular-expressions'})
-
-                dependency_element = feature_component_dependency[0].getparent()
-                version_element = dependency_element.find('p:version', namespaces={'p': 'http://maven.apache.org/POM/4.0.0'})
-
-                if version_element is not None: 
-                    version_element.text = component_artifact_version
+                if feature_version: 
+                    feature_version[0].text = new_feature_version                
+                    feature_pom.write('pom.xml')
                 else:
-                    new_version_element = ET.fromstring('<version>{0}</version>'.format(component_artifact_version))
-                    dependency_element.append(new_version_element)
-                
-                feature_pom.write('pom.xml')
+                    feature_artifactId = feature_pom.xpath('/p:project/p:artifactId', namespaces={'p': 'http://maven.apache.org/POM/4.0.0'})
+                    cmd = 'sed -i \'s/<artifactId>{0}<\\/artifactId>/<artifactId>{0}<\\/artifactId>\\n    <version>{1}<\\/version>/\' pom.xml'.format(feature_artifactId[0].text, new_feature_version)
+                    if os.system(cmd) == 0:
+                        logging.info('successfully updated the chunk component pom file with the new componenet.')
+                    else:
+                        logging.error('failed to updated the chunk component pom file with the new componenet.')
+                        raise Exception()                
 
-                logging.info('successfully created a new component version -> {0}'.format(new_feature_version))
+                logging.info('successfully created a new component version -> {0}@{1}'.format(new_feature_version, os.path.abspath('.')))
+                # Return the path to the new feature
                 return os.path.abspath('.')
                     
             else:
@@ -221,16 +218,90 @@ def create_new_feature(file_path, feature_version, component_artifact_id, compon
             logging.error('seems you have not done the changes to latest existing version !!!')
 
         return None
-    
-def mester_method(component_artifact_id, component_artifact_version):
+    else:
+        # Return the path to existing one since it is not released
+        return file_path
 
-    find_dependent_features(component_artifact_id)
+def update_feature_pom(feature_path, component_artifact_id, component_artifact_version):
     
-    for feature_path in refactor_depenedent_result():
-        feature_version = is_released_feature("/media/shafreen/source/public/turing-new/features/proxyadmin/org.wso2.carbon.proxyadmin.server.feature/4.2.1")
-        print feature_version
-        print create_new_feature('/media/shafreen/source/public/turing-new/features/proxyadmin/org.wso2.carbon.proxyadmin.server.feature/4.2.1', feature_version, component_artifact_id, component_artifact_version)
-        
+    os.chdir(feature_path)
+    feature_pom = ET.parse('pom.xml')
+
+    feature_artifact_id = feature_pom.xpath('/p:project/p:artifactId', namespaces={'p': 'http://maven.apache.org/POM/4.0.0'})
+    feature_version = feature_pom.xpath('/p:project/p:version', namespaces={'p': 'http://maven.apache.org/POM/4.0.0'})
+    feature_parent_version = feature_pom.xpath('/p:project/p:parent/p:version', namespaces={'p': 'http://maven.apache.org/POM/4.0.0'})
+
+    if not feature_version:
+            feature_version = feature_parent_version
+    
+    feature_component_dependency = feature_pom.xpath("/p:project/p:dependencies/p:dependency/p:artifactId[re:match(text(), '{0}$')]".format(component_artifact_id),\
+                                        namespaces={'p': 'http://maven.apache.org/POM/4.0.0', 're': 'http://exslt.org/regular-expressions'})
+
+    # Update dependency
+    dependency_element = feature_component_dependency[0].getparent()
+    version_element = dependency_element.find('p:version', namespaces={'p': 'http://maven.apache.org/POM/4.0.0'})
+
+    if version_element is not None:
+        version_element.text = component_artifact_version
+    else:
+        new_version_element = ET.fromstring('<version>{0}</version>'.format(component_artifact_version))
+        dependency_element.append(new_version_element)
+
+    # Update p2 plugin stuff
+    artifcatId_element = dependency_element.find('p:artifactId', namespaces={'p': 'http://maven.apache.org/POM/4.0.0'})
+
+    # includedFeatures
+    p2_feature_dependency = feature_pom.xpath("//p:includedFeatures/p:includedFeatureDef[re:match(text(), '{0}$')]".format(artifcatId_element.text),\
+                                        namespaces={'p': 'http://maven.apache.org/POM/4.0.0', 're': 'http://exslt.org/regular-expressions'})
+    if p2_feature_dependency:
+        p2_feature_dependency[0].text = p2_feature_dependency[0].text + ":" + component_artifact_version
+    else:
+        p2_feature_dependency = feature_pom.xpath("//p:includedFeatures/p:includedFeatureDef[re:match(text(), '{0}:\d.\d.\d\s*$')]".format(artifcatId_element.text),\
+                                        namespaces={'p': 'http://maven.apache.org/POM/4.0.0', 're': 'http://exslt.org/regular-expressions'})
+        if p2_feature_dependency:            
+            p2_feature_dependency[0].text = p2_feature_dependency[0].text.rpartition(':')[0] + ':' + component_artifact_version
+
+    
+    # bundles 
+    p2_feature_dependency = feature_pom.xpath("//p:bundleDef[re:match(text(), '{0}$')]".format(artifcatId_element.text),\
+                                        namespaces={'p': 'http://maven.apache.org/POM/4.0.0', 're': 'http://exslt.org/regular-expressions'})
+    if p2_feature_dependency:
+        p2_feature_dependency[0].text = artifcatId_element.text + ":" + component_artifact_version
+    else:
+        p2_feature_dependency = feature_pom.xpath("//p:bundleDef[re:match(text(), '{0}:\d.\d.\d$')]".format(artifcatId_element.text),\
+                                            namespaces={'p': 'http://maven.apache.org/POM/4.0.0', 're': 'http://exslt.org/regular-expressions'})
+        if p2_feature_dependency:
+            p2_feature_dependency[0].text = p2_feature_dependency[0].text.rpartition(':')[0] + ':' + component_artifact_version
+                    
+    feature_pom.write('pom.xml')
+
+    logging.info('successfully update the feature with the new component version {0}@{1}'.format(component_artifact_version, os.path.abspath('.')))
+    return [feature_artifact_id[0].text, feature_version[0].text]
+    
+def master_method(component_artifact_id, component_artifact_version):
+
+    # Find dependent featurs of the component
+    dependent_projects = set([])
+    find_dependent_features(component_artifact_id, dependent_projects)
+
+    # Refacator dependent feature to remove older versions
+    feacatored_dependet_set = refactor_depenedent_result(dependent_projects)
+
+    # For each dependet feature add/update the component id and version
+    for feature_path in feacatored_dependet_set:
+
+        print feature_path
+        # See if the feature is released
+        feature_version = is_released_feature(feature_path)
+
+        # Create new feature if needed
+        feature_path = create_new_feature(feature_path, feature_version)
+
+        # Update the feature
+        feature_id_version = update_feature_pom(feature_path, component_artifact_id, component_artifact_version)
+
+        # Recursively call the master method
+        master_method(feature_id_version[0], feature_id_version[1])
     
 
-mester_method("org.wso2.carbon.proxyadmin", '4.2.2')
+master_method("org.wso2.carbon.proxyadmin", '4.2.2')
