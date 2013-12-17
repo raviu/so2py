@@ -27,7 +27,6 @@ __author__      = 'RaviU'
 
 import os
 import sys
-import inspect
 import re
 import time
 
@@ -47,10 +46,11 @@ class Main:
     def run(self, run_order):
         response = True       
         for component in run_order:                         
-            print 'Loading %s' % component + ' component'
             _module = __import__('modules.%s' % component, globals(), locals(), [component], -1)
             component_class = getattr(_module, component)
             component_object = component_class(response)
+
+            print 'Running %s' % component + ' component v%s' % component_object.get_version()
 
             success = component_object.run()
             if not success:

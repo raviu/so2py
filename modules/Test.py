@@ -1,3 +1,5 @@
+__version__     = '0.0.1'
+
 class Test:
     def __init__(self, continueBool):
         if continueBool: 
@@ -5,3 +7,6 @@ class Test:
         
     def run(self):
         return True 
+
+    def get_version(self):
+        return __version__
