@@ -29,6 +29,7 @@ import os
 import sys
 import re
 import time
+import subprocess 
 
 import settings
 
@@ -41,6 +42,8 @@ class Main:
             
     def __init__(self, settings, path):
         print "Running Managment Tools v%s" % __version__ 
+        if settings.repo_location == '' or settings.repo_location == None or settings.repo_location == '#UPDATE_REPO_LOCATION':
+            self.repoloc_wizard()
         sys.path.append(os.path.realpath(__file__)+'/modules/')
         self.context = {'path': path, 'success': True, 'settings': settings}
 	self.path = path
@@ -72,6 +75,23 @@ class Main:
 	if 'settings' not in self.context:
 		self.context['settings'] = self.settings
                
+    def get_direcotry(self):
+	continue_loop = True
+	prompt = "Looks like you're running us for the first time. Please enter file path to Carbon Platform code: "
+	while(continue_loop):
+		repo_loc = raw_input(prompt)
+		if(os.path.isdir(repo_loc)):
+			continue_loop = False
+		else:
+			prompt = "The file path you entered is not a valid directory. Please enter file path to Carbon Platform code: "
+	return repo_loc
+
+    def repoloc_wizard(self):
+        repo_loc = self.get_direcotry()	
+        repo_loc = repo_loc.replace('\\', '\\\\').replace(' ', '\\ ').replace('/', '\/')
+        sed_string = 'sed -r -i \"s/repo_location = \'\'\#UPDATE_REPO_LOCATION/repo_location = %r' % repo_loc + '/g\" %s' % os.path.dirname(os.path.abspath(__file__)) + '/settings.py'
+        print sed_string
+        subprocess.call(sed_string, shell=True) 
 
 path = sys.argv[1] 
 main = Main(settings, path)

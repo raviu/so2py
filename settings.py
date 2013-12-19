@@ -1,5 +1,5 @@
 # Location of platform inside code repository  
-repo_location = '/home/ravi/WORK/RD/carbon/platform/branches/turing/'
+repo_location = ''#UPDATE_REPO_LOCATION
 
 # nexus details
 nexus_url = 'http://maven.wso2.org/'
