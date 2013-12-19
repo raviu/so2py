@@ -90,7 +90,6 @@ class Main:
         repo_loc = self.get_direcotry()	
         repo_loc = repo_loc.replace('\\', '\\\\').replace(' ', '\\ ').replace('/', '\/')
         sed_string = 'sed -r -i \"s/repo_location = \'\'\#UPDATE_REPO_LOCATION/repo_location = %r' % repo_loc + '/g\" %s' % os.path.dirname(os.path.abspath(__file__)) + '/settings.py'
-        print sed_string
         subprocess.call(sed_string, shell=True) 
 
 path = sys.argv[1] 
