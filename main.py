@@ -34,14 +34,18 @@ import settings
 
 class Main:
 
-    code_base_path = '.'
+    path = '';
+    repo_location = '.'
     context = {}
+    settings
             
     def __init__(self, settings, path):
         print "Running Managment Tools v%s" % __version__ 
         sys.path.append(os.path.realpath(__file__)+'/modules/')
-        self.context = {'path': path, 'success': True}
-        self.code_base_path = settings.repo_location
+        self.context = {'path': path, 'success': True, 'settings': settings}
+	self.path = path
+	self.settings = settings
+        self.repo_location = settings.repo_location
         self.run(settings.run_order)
         
     
@@ -54,9 +58,19 @@ class Main:
             print 'Running %s' % component + ' component v%s' % component_object.get_version()
 
             self.context = component_object.run()
-            print self.context
             if not self.context['success']:
                 print "Failed to complete %s" % component + " run" 
+
+	    self.verify_map()
+
+    def verify_map(self):
+	if 'path' not in self.context:
+		self.context['path'] = self.path
+	if 'repo_location' not in self.context:
+		self.context['repo_location'] = self.repo_location
+
+	if 'settings' not in self.context:
+		self.context['settings'] = self.settings
                
 
 path = sys.argv[1] 
