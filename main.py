@@ -30,6 +30,7 @@ import sys
 import re
 import time
 import subprocess 
+import logging
 
 import settings
 
@@ -41,7 +42,19 @@ class Main:
     settings
             
     def __init__(self, settings, path):
+
+	# Configuring the logging. This logging is used accross all the components
+	print os.path.abspath('.')
+	logging.basicConfig(level=logging.DEBUG, format='%(asctime)s: %(levelname)s: %(message)s', filename ='{0}/log/so2py.log'.format(os.path.abspath('.')), filemode = 'w',)
+
+	# Setting the output console too
+	ch = logging.StreamHandler(sys.stdout)
+	ch.setLevel(logging.INFO)
+	ch.setFormatter(logging.Formatter('%(asctime)s: %(levelname)s: %(message)s'))
+	logging.getLogger().addHandler(ch)
+
         print "Running Managment Tools v%s" % __version__ 
+
         if settings.repo_location == '' or settings.repo_location == None or settings.repo_location == '#UPDATE_REPO_LOCATION':
             self.repoloc_wizard()
         sys.path.append(os.path.realpath(__file__)+'/modules/')
@@ -49,8 +62,28 @@ class Main:
 	self.path = path
 	self.settings = settings
         self.repo_location = settings.repo_location
-        self.run(settings.run_order)
-        
+
+	try:
+      		self.run(settings.run_order)
+		
+		if 'changed_paths' in self.context: 
+			changed_paths = self.context['changed_paths'] 
+			for path in changed_paths:
+				logging.info('change done @ {0}'.format(path))
+
+		logging.info('management tool executed without any errors')
+	except:
+		# Need to revert all changes done
+		if 'changed_paths' in self.context:
+			changed_paths = self.context['changed_paths'] 
+			svn_revert_command = 'svn revert --recursive {0}'
+			for path in changed_paths:
+				if os.system(svn_revert_command.format(path)) == 0:
+					logging.info('successfully reverted changes @ {0}'.format(path))
+				else:
+					logging.error('failed to revert changes @ {0}'.format(path))
+
+		raise			
     
     def run(self, run_order):
         for component in run_order:                         
