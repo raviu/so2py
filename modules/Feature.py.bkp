@@ -135,6 +135,7 @@ class Feature:
 				#return True
 			else:
 				return None
+				#return False
 
 		except urllib2.HTTPError as e:
 			if e.code == 404:
@@ -142,6 +143,90 @@ class Feature:
 				return None
 		except:
 			raise Exception()
+			#return False
+
+	# This code is a bit BUGGY. It here just for reference.
+	#def is_released_feature(self, file_path):
+	#   ''' finds if a particular feature is released or not. Implemenation is based on chunk-system
+	#	    If the component is released it returns the feature version.'''
+
+	#   try:    
+	#	os.chdir(file_path)
+	#	feature_pom = ET.parse('pom.xml')
+	#	feature_artifact_id = feature_pom.xpath('/p:project/p:artifactId', namespaces={'p': 'http://maven.apache.org/POM/4.0.0'})
+	#	feature_version = feature_pom.xpath('/p:project/p:version', namespaces={'p': 'http://maven.apache.org/POM/4.0.0'})
+		#feature_parent_artifact_id = feature_pom.xpath('/p:project/p:parent/p:artifactId', namespaces={'p': 'http://maven.apache.org/POM/4.0.0'})
+	#	feature_parent_version = feature_pom.xpath('/p:project/p:parent/p:version', namespaces={'p': 'http://maven.apache.org/POM/4.0.0'})
+	#	feature_parent_rpath = feature_pom.xpath('/p:project/p:parent/p:relativePath', namespaces={'p': 'http://maven.apache.org/POM/4.0.0'})
+
+		# This is becuase we really can't say parent artifactId is similar to its folder name
+	#	if feature_parent_rpath:
+	#	    os.chdir(feature_parent_rpath[0].text.rpartition('/')[0])
+	#	    feature_parent_rpath = os.path.abspath('.')
+	#	else:
+	#	    raise Exception()
+	       
+	#	if not feature_version:
+	#	    feature_version = feature_parent_version
+
+		# Go to product releases ???
+	#	os.chdir("/media/shafreen/source/public/turing-new/product-releases")
+
+		# Get all the chunks available
+		# proc = subprocess.Popen("ls", stdout=subprocess.PIPE, shell=True)
+		# (out, err) = proc.communicate()
+		# chunks = out.split()
+
+		# Find in all chunks
+	#	released_chunk = None
+	#	for chunk in os.listdir("."):
+	#	    if os.path.isdir(chunk):
+	#	        os.chdir("./{0}/features".format(chunk))
+	#	        chunk_feature_pom = ET.parse('pom.xml')
+	#	        module = chunk_feature_pom.xpath("//p:modules/p:module[re:match(text(), '{0}/{1}')]".format(feature_artifact_id[0].text, feature_version[0].text),\
+	#	                                namespaces={'p': 'http://maven.apache.org/POM/4.0.0', 're': 'http://exslt.org/regular-expressions'})
+	#	        if module:
+	#	            released_chunk = chunk
+	#	            os.chdir("../..")
+	#	            break
+		        
+	#	        os.chdir("../..")
+
+		# See if the parent pom is released
+	#	if released_chunk is None: 
+	#	    for chunk in os.listdir("."):
+	#	        os.chdir("./{0}/features".format(chunk))
+	#	        chunk_feature_pom = ET.parse('pom.xml')
+
+	#	        feature_parent_chunk_path = feature_parent_rpath.replace('/media/shafreen/source/public/turing-new', '../../..')
+		        
+	#	        module = chunk_feature_pom.xpath("//p:modules/p:module[re:match(text(), '{0}$')]".format(feature_parent_chunk_path),\
+	#	                              namespaces={'p': 'http://maven.apache.org/POM/4.0.0', 're': 'http://exslt.org/regular-expressions'})
+
+	#	        if module:
+	#	            released_chunk = chunk
+	#	            os.chdir(module[0].text)
+
+	#	            chunk_parent_feature_pom = ET.parse('pom.xml')
+	#	            module = chunk_parent_feature_pom.xpath("//p:modules/p:module[re:match(text(), '{0}/{1}')]".format(feature_artifact_id[0].text, feature_version[0].text),\
+	#	                                namespaces={'p': 'http://maven.apache.org/POM/4.0.0', 're': 'http://exslt.org/regular-expressions'})
+
+	#	            os.chdir("../..")               
+	#	            break
+		            
+	#	        os.chdir("../..")
+
+	#	if module:
+	#	    logging.info("{0}_{1} -> ".format(feature_artifact_id[0].text, feature_version[0].text) + released_chunk)
+	#	    return feature_version[0].text
+	#	else:
+	#	    logging.info("{0}_{1} -> ".format(feature_artifact_id[0].text, feature_version[0].text) + "Not a released FEATURE")
+	#	    return None
+	#    except KeyboardInterrupt:
+	#	logging.error('You cancled the is_released_component is operation. You might have to manually reset the state of platform. !!!')
+	#    except:
+	#	logging.error("Unexpected error:", sys.exc_info()[0])
+	#	raise
 
 	def create_new_feature(self, file_path, feature_version):
 		''' If the feature is released this operation will create a new feature and returen the path to the new feature. '''
@@ -269,8 +354,6 @@ class Feature:
 		            
 		feature_pom.write('pom.xml')
 
-		self.new_prettify()
-
 		# Need this in case we have to revert the changes
 		changed_paths = self.context['changed_paths'] 
 		changed_paths.add(os.path.abspath('.'))
@@ -278,29 +361,6 @@ class Feature:
 		logging.info('successfully update the feature with the new component version {0}@{1}'.format(component_artifact_version, os.path.abspath('.')))
 
 		return [feature_artifact_id[0].text, feature_version[0].text]
-
-	def upate_chunk_component(self, context, new_file_path):
-		os.chdir(context['repo_location'] + "/product-releases")
-
-		# Get the latest chunk release
-		chunks = os.listdir(".")
-		chunks.sort(key=os.path.getmtime, reverse=True)
-
-		os.chdir("./{0}/features".format(chunks[0]))
-		relative_path = new_file_path.replace(context['repo_location'], "../../..")
-
-		chunk_feature_pom = ET.parse('pom.xml')
-		modules = chunk_feature_pom.xpath("//p:modules/node()", namespaces={'p': 'http://maven.apache.org/POM/4.0.0'})
-
-		parent_module = modules[0].getparent()
-		new_module_element = ET.fromstring('<module>{0}</module>'.format(relative_path))
-		parent_module.append(new_module_element)
-		chunk_feature_pom.write('pom.xml')
-
-		self.new_prettify()	
-
-		changed_paths = context['changed_paths'] 
-		changed_paths.add(os.path.abspath('.'))	
 
         def master_method(self, component_artifact_id, component_artifact_version):
 
@@ -318,14 +378,12 @@ class Feature:
 			# See if the feature is released
 			feature_version = self.is_released_feature_nexus(self.context, feature_path)
 
-			# Create new feature if it is released and return the path to new feature		
+			# Create new feature if it is released		
 			if feature_version is not None:
 				feature_path = self.create_new_feature(feature_path, feature_version)
 
 			# Update the feature
 			feature_id_version = self.update_feature_pom(feature_path, component_artifact_id, component_artifact_version)
-
-			self.upate_chunk_component(self.context, feature_path)
 
 			# Recursively call the master method
 			self.master_method(feature_id_version[0], feature_id_version[1])
@@ -344,7 +402,7 @@ class Feature:
 	def get_version(self):
 		return __version__
 
-	def new_prettify(self):
+	def new_prettify():
 		reparsed = mini.parseString(mini.parse('pom.xml').toxml())
 		pretty_string =  '\n'.join([line for line in reparsed.toprettyxml(indent=' '*4).split('\n') if line.strip()])
 
@@ -353,4 +411,6 @@ class Feature:
 			f.write(pretty_string) # write text to file
 		finally:
 			f.close()
+    
 
+#master_method("org.wso2.carbon.proxyadmin", '4.2.2')
