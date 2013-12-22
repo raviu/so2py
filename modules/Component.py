@@ -168,18 +168,23 @@ class Component:
 		os.chdir("./{0}/components".format(chunks[0]))
 		relative_path = new_file_path.replace(context['repo_location'], "../../..")
 
-		chunk_component_pom = ET.parse('pom.xml')
-		modules = chunk_component_pom.xpath("//p:modules/node()", namespaces={'p': 'http://maven.apache.org/POM/4.0.0'})
+		chunk_component_pom = ET.parse('pom.xml')		
+		
+		# Make sure we don't add duplicates 
+		element = chunk_component_pom.xpath("//p:module[re:match(text(), '{0}')]".format(relative_path),\
+						                namespaces={'p': 'http://maven.apache.org/POM/4.0.0', 're': 'http://exslt.org/regular-expressions'})	
 
-		parent_module = modules[0].getparent()
-		new_module_element = ET.fromstring('<module>{0}</module>'.format(relative_path))
-		parent_module.append(new_module_element)
-		chunk_component_pom.write('pom.xml')
+		if not element:
+			modules = chunk_component_pom.xpath("//p:modules/node()", namespaces={'p': 'http://maven.apache.org/POM/4.0.0'})
+			parent_module = modules[0].getparent()
+			new_module_element = ET.fromstring('<module>{0}</module>'.format(relative_path))
+			parent_module.append(new_module_element)
+			chunk_component_pom.write('pom.xml')
 
-		self.new_prettify()	
+			self.new_prettify()	
 
-		changed_paths = context['changed_paths'] 
-		changed_paths.add(os.path.abspath('.'))	
+			changed_paths = context['changed_paths'] 
+			changed_paths.add(os.path.abspath('.'))	
 
 	def run(self):
 		''' This the root method of the component. This method initiate the execution of the component. Therefore by looking at this method
