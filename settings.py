@@ -10,6 +10,7 @@ run_order = (
             'Test',
             'Test2',
             'Component'
+	    'Feature'
             )
 
 
