@@ -1,0 +1,9 @@
+2013-12-22 20:03:17,933: INFO: component builds successfully with new changes.
+2013-12-22 20:03:20,336: INFO: successfully upated the local svn copy.
+2013-12-22 20:03:20,361: INFO: successfully created a new component version -> 4.2.1
+2013-12-22 20:03:30,115: INFO: successfully update the feature with the new component version 4.2.1@/media/shafreen/source/public/turing-new/features/bam2/org.wso2.carbon.bam.messagestore.server.feature/4.2.1
+2013-12-22 20:03:30,364: INFO: change done @ /media/shafreen/source/public/turing-new/product-releases/chunk-06/features
+2013-12-22 20:03:30,364: INFO: change done @ /media/shafreen/source/public/turing-new/components/bam2/org.wso2.carbon.bam.messagestore/4.2.1
+2013-12-22 20:03:30,364: INFO: change done @ /media/shafreen/source/public/turing-new/product-releases/chunk-06/components
+2013-12-22 20:03:30,364: INFO: change done @ /media/shafreen/source/public/turing-new/features/bam2/org.wso2.carbon.bam.messagestore.server.feature/4.2.1
+2013-12-22 20:03:30,364: INFO: management tool executed without any errors
