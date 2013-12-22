@@ -290,17 +290,22 @@ class Feature:
 		relative_path = new_file_path.replace(context['repo_location'], "../../..")
 
 		chunk_feature_pom = ET.parse('pom.xml')
-		modules = chunk_feature_pom.xpath("//p:modules/node()", namespaces={'p': 'http://maven.apache.org/POM/4.0.0'})
 
-		parent_module = modules[0].getparent()
-		new_module_element = ET.fromstring('<module>{0}</module>'.format(relative_path))
-		parent_module.append(new_module_element)
-		chunk_feature_pom.write('pom.xml')
+		# Make sure we don't add duplicates 
+		element = chunk_feature_pom.xpath("//p:module[re:match(text(), '{0}')]".format(relative_path),\
+						                namespaces={'p': 'http://maven.apache.org/POM/4.0.0', 're': 'http://exslt.org/regular-expressions'})
 
-		self.new_prettify()	
+		if not element:
+			modules = chunk_feature_pom.xpath("//p:modules/node()", namespaces={'p': 'http://maven.apache.org/POM/4.0.0'})
+			parent_module = modules[0].getparent()
+			new_module_element = ET.fromstring('<module>{0}</module>'.format(relative_path))
+			parent_module.append(new_module_element)
+			chunk_feature_pom.write('pom.xml')
 
-		changed_paths = context['changed_paths'] 
-		changed_paths.add(os.path.abspath('.'))	
+			self.new_prettify()	
+
+			changed_paths = context['changed_paths'] 
+			changed_paths.add(os.path.abspath('.'))	
 
         def master_method(self, component_artifact_id, component_artifact_version):
 
