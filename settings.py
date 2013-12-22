@@ -9,7 +9,7 @@ nexus_repo_name = 'wso2-public'
 run_order = (
             'Test',
             'Test2',
-            'Component'
+            'Component',
 	    'Feature'
             )
 
