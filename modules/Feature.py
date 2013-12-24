@@ -147,7 +147,7 @@ class Feature:
 	    
 		os.chdir(file_path)
 
-		feature_version = self.get_pom_gav_coordinates(self.context, file_path)
+		feature_version = self.get_pom_gav_coordinates(self.context, file_path)['v']
 
 		# Build the component to see if it builds before doing anything
 		if os.system('mvn clean install -Dmaven.test.skip=true') == 0:
