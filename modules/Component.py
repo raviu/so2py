@@ -90,14 +90,7 @@ class Component:
 
 		file_path = context['path']
 		os.chdir(file_path)
-
-		# Build the component to see if it builds before doing anything
-		if os.system('mvn clean install -Dmaven.test.skip=true') == 0:
-			logging.info('component builds successfully with new changes.')
-		else:
-			logging.error('could not build component with the new changes.')
-			raise Exception()
-
+		
 		# Get the new version of the coponent using the old version
 		component_versions = component_version.rpartition('.')
 		micro_version = component_versions[2]
@@ -107,12 +100,12 @@ class Component:
 		new_component_version = component_versions[0] + component_versions[1] + str(int_micro_version)
 
 		# Go back to the root of the project
-		os.chdir('..')
-		if os.system('svn up') == 0:
-			logging.info('successfully upated the local svn copy.')
+		os.chdir('..')		
+		if os.system('svn up --force .') == 0:
+			logging.info('successfully upated the local svn copy @ {0}.'.format(file_path))
 		else:
-			logging.error('failed to update the local svn copy.')
-			raise Exception()
+			logging.error('failed to update the local svn copy @ {0}'.format(file_path))
+			raise Exception()	
 
 		# Make sure we have done changes to the latest existing version
 		if not os.path.exists(new_component_version):
@@ -146,6 +139,13 @@ class Component:
 
 				# Need to add these info to context as subsequent components need them
 				context['component_artifact_version'] = new_component_version 
+
+				# Build and install the new component to see if it builds before doing anything
+				if os.system('mvn clean install -Dmaven.test.skip=true') == 0:
+					logging.info('component builds successfully with new changes.')
+				else:
+					logging.error('could not build component with the new changes.')
+					raise Exception()
 
 				logging.info('successfully created a new component version -> {0}'.format(new_component_version))
 									
