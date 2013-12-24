@@ -85,19 +85,23 @@ class Component:
 		except:
 			raise Exception()
 
-	def create_new_component(self, context, component_version):
+	def create_new_component(self, context):
 		''' If the component is released this operation will create a new component '''
 
 		file_path = context['path']
 		os.chdir(file_path)
+
+		component_version = self.get_pom_gav_coordinates(self.context)['v']
 		
 		# Get the new version of the coponent using the old version
-		component_versions = component_version.rpartition('.')
-		micro_version = component_versions[2]
-		int_micro_version = int(micro_version)
-		int_micro_version += 1
+		#component_versions = component_version.rpartition('.')
+		#micro_version = component_versions[2]
+		#int_micro_version = int(micro_version)
+		#int_micro_version += 1
 
-		new_component_version = component_versions[0] + component_versions[1] + str(int_micro_version)
+		#new_component_version = component_versions[0] + component_versions[1] + str(int_micro_version)
+
+		new_component_version = self.get_imidiate_new_version(self.context, file_path)
 
 		# Go back to the root of the project
 		os.chdir('..')		
@@ -120,8 +124,6 @@ class Component:
 				changed_paths = self.context['changed_paths'] 
 				changed_paths.add(os.path.abspath('.'))
 				
-
-				# WHAT IF THERE IS NO VERSION ELEMENT ???
 				component_version = component_pom.xpath('/p:project/p:version', namespaces={'p': 'http://maven.apache.org/POM/4.0.0'})
 
 				if component_version:
@@ -146,6 +148,8 @@ class Component:
 				else:
 					logging.error('could not build component with the new changes.')
 					raise Exception()
+
+				self.new_prettify()
 
 				logging.info('successfully created a new component version -> {0}'.format(new_component_version))
 									
@@ -186,6 +190,32 @@ class Component:
 			changed_paths = context['changed_paths'] 
 			changed_paths.add(os.path.abspath('.'))	
 
+	def get_imidiate_new_version(self, context, file_path):
+		gav = self.get_pom_gav_coordinates(context)
+		gav['r'] = self.context['settings'].nexus_repo_name
+		gav['v'] = 'LATEST'
+	
+		params = urllib.urlencode(gav)
+		url = self.context['settings'].nexus_url + '/nexus/service/local/artifact/maven/resolve?%s' % params
+		print url
+
+		try:
+			response = urllib2.urlopen(url).read()
+			response_et = ET.fromstring(response)
+			version = response_et.xpath('/artifact-resolution/data/version', namespaces={})[0].text
+			
+			feature_versions = version.rpartition('.')
+			micro_version = feature_versions[2]
+			int_micro_version = int(micro_version)
+			int_micro_version += 1 
+
+			imidiate_new_version = feature_versions[0] + feature_versions[1] + str(int_micro_version)
+
+			return imidiate_new_version
+		except:
+			logging.error('could not create the latest imidiate version for {0}'.format(url))
+			raise Exception()
+	    
 	def run(self):
 		''' This the root method of the component. This method initiate the execution of the component. Therefore by looking at this method
 			one cad determin the execution flow and what it does.'''
@@ -194,12 +224,14 @@ class Component:
 		self.context['changed_paths'] = changed_paths 
 
 		# See if it is released
-		component_version = self.is_released_component_nexus(self.context)
+		#component_version = self.is_released_component_nexus(self.context)
 
 		# Create new component if it is released	
-		path_to_new_component = None	
-		if component_version is not None:
-			path_to_new_component = self.create_new_component(self.context, component_version)
+		#path_to_new_component = None	
+		#if component_version is not None:
+		#	path_to_new_component = self.create_new_component(self.context, component_version)
+
+		path_to_new_component = self.create_new_component(self.context)
 
 		# Update latest chunk with the new component
 		if path_to_new_component:
