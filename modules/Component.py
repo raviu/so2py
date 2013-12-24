@@ -125,8 +125,16 @@ class Component:
 				changed_paths.add(os.path.abspath('.'))
 				
 				component_version = component_pom.xpath('/p:project/p:version', namespaces={'p': 'http://maven.apache.org/POM/4.0.0'})
-
+				
 				if component_version:
+
+					# This makes sure changing the project version won't impact any other reference to project version.
+					if os.system('sed -i \'s/${{project.version}}/{0}/g\' pom.xml'.format(component_version[0].text)) == 0:
+						logging.info('successfully replaced ${{project.version}} with it is actual value.')
+					else:
+						logging.error('failed to replace ${{project.version}} with it is actual value @ {0}'.format(os.path.abspath('.')))
+						raise Exception()
+
 					component_version[0].text = new_component_version
 					component_pom.write('pom.xml')
 				else:
@@ -151,16 +159,34 @@ class Component:
 
 				self.new_prettify()
 
-				logging.info('successfully created a new component version -> {0}'.format(new_component_version))
+				logging.info('successfully created a new component version {0}'.format(new_component_version))
 									
 				return os.path.abspath('.')
 
-			else:
-				logging.error('failed to create a new component version -> {0}'.format(new_component_version))
+			else:				
+				logging.error('failed to create a new component version {0}'.format(new_component_version))
 				raise Exception()
 		else:
-			logging.error('seems you have not done the changes to latest existing version @{0}'.format(os.path.abspath('.')))
-			raise Exception()
+			if component_version == new_component_version:
+				# See if it is under version control
+				os.chdir(new_component_version)
+
+				if os.system('svn info') == 0:
+					logging.info('updating the existing component version {0} @ {1}'.format(new_component_version, os.path.abspath('.')))
+					return os.path.abspath('.')  
+				else:
+					logging.error('seems component version is not version controle @ {0}'.format(os.path.abspath('.')))
+					raise Exception()
+
+				# Build and install the new component to see if it builds before doing anything
+				if os.system('mvn clean install -Dmaven.test.skip=true') == 0:
+					logging.info('component builds successfully with new changes.')
+				else:
+					logging.error('could not build component with the new changes.')
+					raise Exception()
+			else:
+				logging.error('seems you have not done the changes to the latest existing version @ {0}'.format(os.path.abspath('.')))
+				raise Exception()
 
 	def upate_chunk_component(self, context, new_file_path):
 		os.chdir(context['repo_location'] + "/product-releases")
