@@ -148,14 +148,7 @@ class Feature:
 		os.chdir(file_path)
 
 		feature_version = self.get_pom_gav_coordinates(self.context, file_path)['v']
-
-		# Build the component to see if it builds before doing anything
-		if os.system('mvn clean install -Dmaven.test.skip=true') == 0:
-			logging.info('feature builds successfully with new changes.')
-		else:
-			logging.error('could not build feature with the new changes.')
-			raise Exception()
-
+		
 		# Get the new version of the coponent using the old version
 		#feature_versions = feature_version.rpartition('.')
 		#micro_version = feature_versions[2]
@@ -190,6 +183,13 @@ class Feature:
 				feature_version = feature_pom.xpath('/p:project/p:version', namespaces={'p': 'http://maven.apache.org/POM/4.0.0'})
 
 				if feature_version: 
+					# This makes sure changing the project version won't impact any other reference to project version.
+					if os.system('sed -i \'s/${{project.version}}/{0}/g\' pom.xml'.format(feature_version[0].text)) == 0:
+						logging.info('successfully replaced ${{project.version}} with it is actual value.')
+					else:
+						logging.error('failed to replace ${{project.version}} with it is actual value @ {0}'.format(os.path.abspath('.')))
+						raise Exception()
+
 					feature_version[0].text = new_feature_version                
 					feature_pom.write('pom.xml')
 				else:
@@ -197,25 +197,25 @@ class Feature:
 					cmd = 'sed -i \'s/<artifactId>{0}<\\/artifactId>/<artifactId>{0}<\\/artifactId>\\n    <version>{1}<\\/version>/\' pom.xml'.format(feature_artifactId[0].text, new_feature_version)
 					if os.system(cmd) != 0:
 						logging.error('failed to updated the chunk feature pom file with the new componenet.')
-						raise Exception()             
+						raise Exception()            
 
-				logging.info('successfully created a new component version -> {0}@{1}'.format(new_feature_version, os.path.abspath('.')))
+				logging.info('successfully created a new feature version {0} @ {1}'.format(new_feature_version, os.path.abspath('.')))
 	
 				# Return the path to the new feature
 				return os.path.abspath('.')
 				    
 			else:
-				logging.error('failed to create a new component version -> {0}'.format(new_feature_version))
+				logging.error('failed to create a new feature version {0}'.format(new_feature_version))
 				raise Exception()
 		else:
 			# See if it is under version control
 			os.chdir(new_feature_version)
 
 			if os.system('svn info') == 0:
-				logging.info('updating the existing compnent version {0} @ {1}'.format(new_feature_version, os.path.abspath('.')))
+				logging.info('successfully updated the existing feature version {0} @ {1}'.format(new_feature_version, os.path.abspath('.')))
 				return os.path.abspath('.')
 			else:
-				logging.error('seems you have not done the changes to latest existing version @{0}'.format(os.path.abspath('.')))
+				logging.error('seems feature version is not version controle @ {0}'.format(os.path.abspath('.')))
 				raise Exception()	
 
 
@@ -262,7 +262,7 @@ class Feature:
 				                namespaces={'p': 'http://maven.apache.org/POM/4.0.0', 're': 'http://exslt.org/regular-expressions'})
 		if p2_feature_dependency:
 			#p2_feature_dependency[0].text = p2_feature_dependency[0].text + ":" + component_artifact_version
-			p2_feature_dependency[0].text = p2_feature_dependency 
+			p2_feature_dependency[0].text = new_dependency_gav
 		else:
 			p2_feature_dependency = feature_pom.xpath("//p:includedFeatures/p:includedFeatureDef[re:match(text(), '{0}:\d.\d.\d\s*$ || {0}:.*$')]".format(dependency_artifcatId_element.text),\
 				                namespaces={'p': 'http://maven.apache.org/POM/4.0.0', 're': 'http://exslt.org/regular-expressions'})
@@ -288,6 +288,13 @@ class Feature:
 		feature_pom.write('pom.xml')
 
 		self.new_prettify()
+
+		# Build and install the feature
+		if os.system('mvn clean install -Dmaven.test.skip=true') == 0:
+			logging.info('feature builds successfully with new changes.')
+		else:
+			logging.error('could not build feature with the new changes.')
+			raise Exception() 
 
 		# Need this in case we have to revert the changes
 		changed_paths = self.context['changed_paths'] 
