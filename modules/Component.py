@@ -246,7 +246,7 @@ class Component:
 		# Need to add these info to context as subsequent components need them. here we set the *DEFAULT* values.
 		gav_default_codinates = self.get_pom_gav_coordinates(self.context, self.context['path'])
 		self.context['component_artifact_id'] = gav_default_codinates['a']
-		self.context['component_artifact_version'] = gav_default_codinates['a']
+		self.context['component_artifact_version'] = gav_default_codinates['v']
 
 		# 2) This approach allows us to shape the svn according to nexus.
 		path_to_new_component = self.create_new_component(self.context)
