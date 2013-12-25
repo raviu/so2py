@@ -87,16 +87,9 @@ class Component:
 		os.chdir(file_path)
 
 		component_version = self.get_pom_gav_coordinates(self.context, file_path)['v']
-		
-		# Get the new version of the coponent using the old version
-		#component_versions = component_version.rpartition('.')
-		#micro_version = component_versions[2]
-		#int_micro_version = int(micro_version)
-		#int_micro_version += 1
-
-		#new_component_version = component_versions[0] + component_versions[1] + str(int_micro_version)
-
 		new_component_version = self.get_imidiate_new_version(self.context, file_path)
+
+		print component_version, new_component_version
 
 		# Go back to the root of the project
 		os.chdir('..')		
@@ -254,15 +247,6 @@ class Component:
 		gav_default_codinates = self.get_pom_gav_coordinates(self.context, self.context['path'])
 		self.context['component_artifact_id'] = gav_default_codinates['a']
 		self.context['component_artifact_version'] = gav_default_codinates['a']
-
-		# See if it is released
-		#component_version = self.is_released_component_nexus(self.context)
-
-		# 1)
-		# Create new component if it is released	
-		#path_to_new_component = None	
-		#if component_version is not None:
-		#	path_to_new_component = self.create_new_component(self.context, component_version)
 
 		# 2) This approach allows us to shape the svn according to nexus.
 		path_to_new_component = self.create_new_component(self.context)
