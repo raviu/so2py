@@ -24,6 +24,7 @@
 
 import sys
 import os
+import re
 import subprocess
 import urllib, urllib2
 import logging
@@ -185,11 +186,19 @@ class Component:
 	def upate_chunk_component(self, context, new_file_path):
 		os.chdir(context['repo_location'] + "/product-releases")
 
-		# Get the latest chunk release
 		chunks = os.listdir(".")
-		chunks.sort(key=os.path.getmtime, reverse=True)
+		list = []
+		for chunk in chunks:
+			match = re.search(r"chunk-\d+$", chunk)
+			if match:
+				list.append(int(match.group(0).split('-')[1]))
 
-		os.chdir("./{0}/components".format(chunks[0]))
+		list.sort()
+		list.reverse()
+		latest_chunk_number = "%02d" % list[0]
+		latest_chunk = 'chunk-' + latest_chunk_number
+
+		os.chdir("./{0}/components".format(latest_chunk))
 		relative_path = new_file_path.replace(context['repo_location'], "../../..")
 
 		chunk_component_pom = ET.parse('pom.xml')		
