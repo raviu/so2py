@@ -26,6 +26,7 @@ import os
 import logging
 import sys
 import urllib, urllib2
+import re
 from lxml import etree as ET
 import xml.dom.minidom as mini
 
@@ -112,10 +113,6 @@ class Feature:
 		if not feature_version:
 			feature_version = feature_parent_version
 
-		# Need to add these info to context as subsequent components need them
-		#context['component_artifact_id'] = feature_artifact_id[0].text
-		#context['component_artifact_version'] = feature_version[0].text
-
 		return {"g": feature_group_id[0].text, "a": feature_artifact_id[0].text, "v": feature_version[0].text, "p": feature_packaging[0].text}
 
 	#def is_released_feature_nexus(self, context, file_path):
@@ -142,23 +139,49 @@ class Feature:
 	#	except:
 	#		raise Exception()
 
+	def perpare_pom(self):
+		''' This method prepares the pom file to necessary changes '''
+
+		# This makes sure changing the project version won't impact any other reference to project version.
+		old_version = self.get_pom_gav_coordinates(self.context, os.path.abspath('.'))['v']
+		if old_version: 
+			if os.system('sed -i \'s/${{project.version}}/{0}/g\' pom.xml'.format(old_version)) == 0:
+				logging.info('successfully replaced ${{project.version}} with it is actual value.')
+			else:
+				logging.error('failed to replace ${{project.version}} with it is actual value @ {0}'.format(os.path.abspath('.')))
+				raise Exception()
+		else:
+			logging.error('couldn not find the original version of feature @ {0}'.fromat(os.path.abspath('.')))
+			raise Exception()
+
+		# This to make sure version changes won't impact p2 dependency s
+		feature_pom = ET.parse('pom.xml')
+
+		p2_feature_dependencys = feature_pom.xpath("//p:includedFeatures/p:includedFeatureDef[re:match(text(), '.*\D+$')]",\
+		                namespaces={'p': 'http://maven.apache.org/POM/4.0.0', 're': 'http://exslt.org/regular-expressions'})
+		
+		for p2_feature_dependency in p2_feature_dependencys:
+			p2_feature_dependency.text = p2_feature_dependency.text.strip()
+			if not re.search(r".*:\$\{.*\}.*", p2_feature_dependency.text):
+				p2_feature_dependency.text = p2_feature_dependency.text + ":" + old_version
+		else:
+			p2_feature_dependencys = feature_pom.xpath("//p:bundleDef[re:match(text(), '.*\D+$')]",\
+						namespaces={'p': 'http://maven.apache.org/POM/4.0.0', 're': 'http://exslt.org/regular-expressions'})
+
+			for p2_feature_dependency in p2_feature_dependencys:
+				p2_feature_dependency.text = p2_feature_dependency.text.strip()
+				if not re.search(r".*:\$\{.*\}.*", p2_feature_dependency.text):
+					p2_feature_dependency.text = p2_feature_dependency.text + ":" + old_version
+
+		feature_pom.write('pom.xml')
+		
 	def create_new_feature(self, file_path):
 		''' If the feature is released this operation will create a new feature and returen the path to the new feature. '''
 	    
 		os.chdir(file_path)
 
 		feature_version = self.get_pom_gav_coordinates(self.context, file_path)['v']
-		
-		# Get the new version of the coponent using the old version
-		#feature_versions = feature_version.rpartition('.')
-		#micro_version = feature_versions[2]
-		#int_micro_version = int(micro_version)
-		#int_micro_version += 1 
-
-		#new_feature_version = feature_versions[0] + feature_versions[1] + str(int_micro_version)
-
 		new_feature_version = self.get_imidiate_new_version(self.context, file_path)
-		print new_feature_version
 
 		# Go back to the root of the project
 		os.chdir('..')
@@ -178,19 +201,9 @@ class Feature:
 				# Need this in case we have to revert the changes
 				changed_paths = self.context['changed_paths'] 
 				changed_paths.add(os.path.abspath('.'))
+			
+				self.perpare_pom()
 
-				# This makes sure changing the project version won't impact any other reference to project version.
-				old_version = self.get_pom_gav_coordinates(self.context, os.path.abspath('.'))['v']
-				if old_version: 
-					if os.system('sed -i \'s/${{project.version}}/{0}/g\' pom.xml'.format(old_version)) == 0:
-						logging.info('successfully replaced ${{project.version}} with it is actual value.')
-					else:
-						logging.error('failed to replace ${{project.version}} with it is actual value @ {0}'.format(os.path.abspath('.')))
-						raise Exception()
-				else:
-					logging.error('couldn not find the original version of feature @ {0}'.fromat(os.path.abspath('.')))
-					raise Exception()
-				
 				# now the pom file is ready be changed.
 				feature_pom = ET.parse('pom.xml')
 				feature_version = feature_pom.xpath('/p:project/p:version', namespaces={'p': 'http://maven.apache.org/POM/4.0.0'})
@@ -263,34 +276,16 @@ class Feature:
 
 		new_dependency_gav = '{0}:{1}:{2}'.format(dependency_groupId_element.text, dependency_artifcatId_element.text, component_artifact_version)
 
-		# includedFeatures
-		p2_feature_dependency = feature_pom.xpath("//p:includedFeatures/p:includedFeatureDef[re:match(text(), '{0}$')]".format(dependency_artifcatId_element.text),\
+		p2_feature_dependency = feature_pom.xpath("//p:includedFeatures/p:includedFeatureDef[re:match(text(), '.*{0}.*')]".format(dependency_artifcatId_element.text),\
 				                namespaces={'p': 'http://maven.apache.org/POM/4.0.0', 're': 'http://exslt.org/regular-expressions'})
 		if p2_feature_dependency:
-			#p2_feature_dependency[0].text = p2_feature_dependency[0].text + ":" + component_artifact_version
 			p2_feature_dependency[0].text = new_dependency_gav
 		else:
-			p2_feature_dependency = feature_pom.xpath("//p:includedFeatures/p:includedFeatureDef[re:match(text(), '{0}:\d.\d.\d\s*$ || {0}:.*$')]".format(dependency_artifcatId_element.text),\
-				                namespaces={'p': 'http://maven.apache.org/POM/4.0.0', 're': 'http://exslt.org/regular-expressions'})
-			if p2_feature_dependency:            
-				#p2_feature_dependency[0].text = p2_feature_dependency[0].text.rpartition(':')[0] + ':' + component_artifact_version
-				p2_feature_dependency[0].text = new_dependency_gav
-			else: 	    
-				# bundles 
-				p2_feature_dependency = feature_pom.xpath("//p:bundleDef[re:match(text(), '{0}$')]".format(dependency_artifcatId_element.text),\
-						                namespaces={'p': 'http://maven.apache.org/POM/4.0.0', 're': 'http://exslt.org/regular-expressions'})
-				if p2_feature_dependency:
-					#p2_feature_dependency[0].text = p2_feature_dependency[0].text + ":" + component_artifact_version
-					p2_feature_dependency[0].text = new_dependency_gav
-				else:
-					p2_feature_dependency = feature_pom.xpath("//p:bundleDef[re:match(text(), '{0}:\d.\d.\d\s*$ || {0}:.*$')]".format(dependency_artifcatId_element.text),\
-							    namespaces={'p': 'http://maven.apache.org/POM/4.0.0', 're': 'http://exslt.org/regular-expressions'})
-					if p2_feature_dependency:
-						#p2_feature_dependency[0].text = p2_feature_dependency[0].text.rpartition(':')[0] + ':' + component_artifact_version
-						p2_feature_dependency[0].text =  new_dependency_gav
-					#else:
-					#	raise Exception()
-		            
+			p2_feature_dependency = feature_pom.xpath("//p:bundleDef[re:match(text(), '.*{0}.*')]".format(dependency_artifcatId_element.text),\
+						namespaces={'p': 'http://maven.apache.org/POM/4.0.0', 're': 'http://exslt.org/regular-expressions'})
+			if p2_feature_dependency:
+				p2_feature_dependency[0].text = new_dependency_gav			
+					            
 		feature_pom.write('pom.xml')
 
 		self.new_prettify()
