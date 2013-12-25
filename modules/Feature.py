@@ -118,29 +118,29 @@ class Feature:
 
 		return {"g": feature_group_id[0].text, "a": feature_artifact_id[0].text, "v": feature_version[0].text, "p": feature_packaging[0].text}
 
-	def is_released_feature_nexus(self, context, file_path):
-		gav = self.get_pom_gav_coordinates(context, file_path)
-		gav['r'] = self.context['settings'].nexus_repo_name
+	#def is_released_feature_nexus(self, context, file_path):
+	#	gav = self.get_pom_gav_coordinates(context, file_path)
+	#	gav['r'] = self.context['settings'].nexus_repo_name
 		
-		params = urllib.urlencode(gav)
-		url = self.context['settings'].nexus_url + '/nexus/service/local/artifact/maven/resolve?%s' % params
-		print url
+	#	params = urllib.urlencode(gav)
+	#	url = self.context['settings'].nexus_url + '/nexus/service/local/artifact/maven/resolve?%s' % params
+	#	print url
 
-		try:
-			response = urllib2.urlopen(url).read()
-			response_et = ET.fromstring(response)
-			if gav['v'] == response_et.xpath('/artifact-resolution/data/version', namespaces={})[0].text:
-				print response_et.xpath('/artifact-resolution/data/version', namespaces={})[0].text + " is released"							
-				return True
-			else:
-				return False
+	#	try:
+	#		response = urllib2.urlopen(url).read()
+	#		response_et = ET.fromstring(response)
+	#		if gav['v'] == response_et.xpath('/artifact-resolution/data/version', namespaces={})[0].text:
+	#			print response_et.xpath('/artifact-resolution/data/version', namespaces={})[0].text + " is released"							
+	#			return True
+	#		else:
+	#			return False
 
-		except urllib2.HTTPError as e:
-			if e.code == 404:
-				# This mean it is not a released version. because if u try to resolve a gav wich is not released this url throws 404
-				return False
-		except:
-			raise Exception()
+	#	except urllib2.HTTPError as e:
+	#		if e.code == 404:
+	#			# This mean it is not a released version. because if u try to resolve a gav wich is not released this url throws 404
+	#			return False
+	#	except:
+	#		raise Exception()
 
 	def create_new_feature(self, file_path):
 		''' If the feature is released this operation will create a new feature and returen the path to the new feature. '''

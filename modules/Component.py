@@ -60,30 +60,30 @@ class Component:
 
 		return {"g": component_group_id[0].text, "a": component_artifact_id[0].text, "v": component_version[0].text}
 
-	def is_released_component_nexus(self, context):
-		gav = self.get_pom_gav_coordinates(context)
-		gav['r'] = self.context['settings'].nexus_repo_name
+	#def is_released_component_nexus(self, context):
+	#	gav = self.get_pom_gav_coordinates(context)
+	#	gav['r'] = self.context['settings'].nexus_repo_name
 		
-		params = urllib.urlencode(gav)
-		url = self.context['settings'].nexus_url + '/nexus/service/local/artifact/maven/resolve?%s' % params
-		print url
-				
-		try:
-			response = urllib2.urlopen(url).read()
-			response_et = ET.fromstring(response)
-			if gav['v'] == response_et.xpath('/artifact-resolution/data/version', namespaces={})[0].text:
-				print response_et.xpath('/artifact-resolution/data/version', namespaces={})[0].text + " is released"						
-				return gav['v']
-				#return True
-			else:
-				return None
+	#	params = urllib.urlencode(gav)
+	#	url = self.context['settings'].nexus_url + '/nexus/service/local/artifact/maven/resolve?%s' % params
+	#	print url
+	#			
+	#	try:
+	#		response = urllib2.urlopen(url).read()
+	#		response_et = ET.fromstring(response)
+	#		if gav['v'] == response_et.xpath('/artifact-resolution/data/version', namespaces={})[0].text:
+	#			print response_et.xpath('/artifact-resolution/data/version', namespaces={})[0].text + " is released"						
+	#			return gav['v']
+	#			#return True
+	#		else:
+	#			return None
 
-		except urllib2.HTTPError as e:
-			if e.code == 404:
+	#	except urllib2.HTTPError as e:
+	#		if e.code == 404:
 				# This mean it is not a released version. because if u try to resolve a gav wich is not released this url throws 404
-				return None
-		except:
-			raise Exception()
+	#			return None
+	#	except:
+	#		raise Exception()
 
 	def create_new_component(self, context):
 		''' If the component is released this operation will create a new component '''
@@ -168,12 +168,12 @@ class Component:
 				raise Exception()
 		else:
 			if component_version == new_component_version:
-				# See if it is under version control
+				
 				os.chdir(new_component_version)
 
+				# See if it is under version control
 				if os.system('svn info') == 0:
-					logging.info('updating the existing component version {0} @ {1}'.format(new_component_version, os.path.abspath('.')))
-					return os.path.abspath('.')  
+					logging.info('updating the existing component version {0} @ {1}'.format(new_component_version, os.path.abspath('.')))					
 				else:
 					logging.error('seems component version is not version controle @ {0}'.format(os.path.abspath('.')))
 					raise Exception()
@@ -181,6 +181,7 @@ class Component:
 				# Build and install the new component to see if it builds before doing anything
 				if os.system('mvn clean install -Dmaven.test.skip=true') == 0:
 					logging.info('component builds successfully with new changes.')
+					return os.path.abspath('.')  
 				else:
 					logging.error('could not build component with the new changes.')
 					raise Exception()
@@ -252,11 +253,13 @@ class Component:
 		# See if it is released
 		#component_version = self.is_released_component_nexus(self.context)
 
+		# 1)
 		# Create new component if it is released	
 		#path_to_new_component = None	
 		#if component_version is not None:
 		#	path_to_new_component = self.create_new_component(self.context, component_version)
 
+		# 2) This approach allows us to shape the svn according to nexus.
 		path_to_new_component = self.create_new_component(self.context)
 
 		# Update latest chunk with the new component
