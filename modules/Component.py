@@ -40,8 +40,7 @@ class Component:
 	def __init__(self, context):
 		self.context = context
 
-	def get_pom_gav_coordinates(self, context):
-		file_path = context['path']
+	def get_pom_gav_coordinates(self, context, file_path):
 		repo_loc = context['repo_location']
 
 		os.chdir(file_path)
@@ -53,11 +52,7 @@ class Component:
 
 		if not component_version:
 			component_version = component_parent_version
-
-		# Need to add these info to context as subsequent components need them.
-		context['component_artifact_id'] = component_artifact_id[0].text
-		context['component_artifact_version'] = component_version[0].text
-
+		
 		return {"g": component_group_id[0].text, "a": component_artifact_id[0].text, "v": component_version[0].text}
 
 	#def is_released_component_nexus(self, context):
@@ -91,7 +86,7 @@ class Component:
 		file_path = context['path']
 		os.chdir(file_path)
 
-		component_version = self.get_pom_gav_coordinates(self.context)['v']
+		component_version = self.get_pom_gav_coordinates(self.context, file_path)['v']
 		
 		# Get the new version of the coponent using the old version
 		#component_versions = component_version.rpartition('.')
@@ -118,23 +113,28 @@ class Component:
 			if os.system(svn_mkdir_command) == 0:
 								
 				os.chdir(new_component_version)
+
+				# This makes sure changing the project version won't impact any other reference to project version.
+				old_version = self.get_pom_gav_coordinates(self.context, os.path.abspath('.'))['v']
+				if old_version: 
+					if os.system('sed -i \'s/${{project.version}}/{0}/g\' pom.xml'.format(old_version)) == 0:
+						logging.info('successfully replaced ${{project.version}} with it is actual value @ {0}'.format(os.path.abspath('.')))
+					else:
+						logging.error('failed to replace ${{project.version}} with it is actual value @ {0}'.format(os.path.abspath('.')))
+						raise Exception()
+				else:
+					logging.error('couldn not find the original version of component @ {0}'.fromat(os.path.abspath('.')))
+					raise Exception()
+				
 				component_pom = ET.parse('pom.xml')
 
 				# Need this in case we have to revert the changes				
 				changed_paths = self.context['changed_paths'] 
-				changed_paths.add(os.path.abspath('.'))
+				changed_paths.add(os.path.abspath('.'))				
 				
-				component_version = component_pom.xpath('/p:project/p:version', namespaces={'p': 'http://maven.apache.org/POM/4.0.0'})
-				
+				# now the pom file is ready be changed.
+				component_version = component_pom.xpath('/p:project/p:version', namespaces={'p': 'http://maven.apache.org/POM/4.0.0'})							
 				if component_version:
-
-					# This makes sure changing the project version won't impact any other reference to project version.
-					if os.system('sed -i \'s/${{project.version}}/{0}/g\' pom.xml'.format(component_version[0].text)) == 0:
-						logging.info('successfully replaced ${{project.version}} with it is actual value.')
-					else:
-						logging.error('failed to replace ${{project.version}} with it is actual value @ {0}'.format(os.path.abspath('.')))
-						raise Exception()
-
 					component_version[0].text = new_component_version
 					component_pom.write('pom.xml')
 				else:
@@ -148,7 +148,7 @@ class Component:
 						raise Exception()  
 
 				# Need to add these info to context as subsequent components need them
-				context['component_artifact_version'] = new_component_version 
+				context['component_artifact_version'] = new_component_version 				
 
 				# Build and install the new component to see if it builds before doing anything
 				if os.system('mvn clean install -Dmaven.test.skip=true') == 0:
@@ -218,7 +218,7 @@ class Component:
 			changed_paths.add(os.path.abspath('.'))	
 
 	def get_imidiate_new_version(self, context, file_path):
-		gav = self.get_pom_gav_coordinates(context)
+		gav = self.get_pom_gav_coordinates(context, file_path)
 		gav['r'] = self.context['settings'].nexus_repo_name
 		gav['v'] = 'LATEST'
 	
@@ -249,6 +249,11 @@ class Component:
 
 		changed_paths = set([])
 		self.context['changed_paths'] = changed_paths 
+
+		# Need to add these info to context as subsequent components need them. here we set the *DEFAULT* values.
+		gav_default_codinates = self.get_pom_gav_coordinates(self.context, self.context['path'])
+		self.context['component_artifact_id'] = gav_default_codinates['a']
+		self.context['component_artifact_version'] = gav_default_codinates['a']
 
 		# See if it is released
 		#component_version = self.is_released_component_nexus(self.context)

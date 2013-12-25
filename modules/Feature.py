@@ -174,22 +174,28 @@ class Feature:
 
 			if os.system(svn_mkdir_command) == 0:
 				os.chdir(new_feature_version)
-				feature_pom = ET.parse('pom.xml')
 
 				# Need this in case we have to revert the changes
 				changed_paths = self.context['changed_paths'] 
 				changed_paths.add(os.path.abspath('.'))
 
-				feature_version = feature_pom.xpath('/p:project/p:version', namespaces={'p': 'http://maven.apache.org/POM/4.0.0'})
-
-				if feature_version: 
-					# This makes sure changing the project version won't impact any other reference to project version.
-					if os.system('sed -i \'s/${{project.version}}/{0}/g\' pom.xml'.format(feature_version[0].text)) == 0:
+				# This makes sure changing the project version won't impact any other reference to project version.
+				old_version = self.get_pom_gav_coordinates(self.context, os.path.abspath('.'))['v']
+				if old_version: 
+					if os.system('sed -i \'s/${{project.version}}/{0}/g\' pom.xml'.format(old_version)) == 0:
 						logging.info('successfully replaced ${{project.version}} with it is actual value.')
 					else:
 						logging.error('failed to replace ${{project.version}} with it is actual value @ {0}'.format(os.path.abspath('.')))
 						raise Exception()
+				else:
+					logging.error('couldn not find the original version of feature @ {0}'.fromat(os.path.abspath('.')))
+					raise Exception()
+				
+				# now the pom file is ready be changed.
+				feature_pom = ET.parse('pom.xml')
+				feature_version = feature_pom.xpath('/p:project/p:version', namespaces={'p': 'http://maven.apache.org/POM/4.0.0'})
 
+				if feature_version: 
 					feature_version[0].text = new_feature_version                
 					feature_pom.write('pom.xml')
 				else:
