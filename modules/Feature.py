@@ -184,25 +184,25 @@ class Feature:
 		feature_pom.write('pom.xml')
 
 		# This to make sure version changes won't impact p2 dependencies. Second line of defence.
-		#feature_pom = ET.parse('pom.xml')
+		feature_pom = ET.parse('pom.xml')
 
-		#p2_feature_dependencys = feature_pom.xpath("//p:includedFeatures/p:includedFeatureDef[re:match(text(), '.*\D+$')]",\
-		#                namespaces={'p': 'http://maven.apache.org/POM/4.0.0', 're': 'http://exslt.org/regular-expressions'})
+		p2_feature_dependencys = feature_pom.xpath("//p:includedFeatures/p:includedFeatureDef[re:match(text(), '.*\D+$')]",\
+		                namespaces={'p': 'http://maven.apache.org/POM/4.0.0', 're': 'http://exslt.org/regular-expressions'})
 		
-		#for p2_feature_dependency in p2_feature_dependencys:
-		#	p2_feature_dependency.text = p2_feature_dependency.text.strip()
-		#	if not re.search(r".*:\$\{.*\}.*", p2_feature_dependency.text):
-		#		p2_feature_dependency.text = p2_feature_dependency.text + ":" + old_version
-		#else:
-		#	p2_feature_dependencys = feature_pom.xpath("//p:bundleDef[re:match(text(), '.*\D+$')]",\
-		#				namespaces={'p': 'http://maven.apache.org/POM/4.0.0', 're': 'http://exslt.org/regular-expressions'})
+		for p2_feature_dependency in p2_feature_dependencys:
+			p2_feature_dependency.text = p2_feature_dependency.text.strip()
+			if not re.search(r".*:\$\{.*\}.*", p2_feature_dependency.text):
+				p2_feature_dependency.text = p2_feature_dependency.text + ":" + old_version
+		else:
+			p2_feature_dependencys = feature_pom.xpath("//p:bundleDef[re:match(text(), '.*\D+$')]",\
+						namespaces={'p': 'http://maven.apache.org/POM/4.0.0', 're': 'http://exslt.org/regular-expressions'})
 
-		#	for p2_feature_dependency in p2_feature_dependencys:
-		#		p2_feature_dependency.text = p2_feature_dependency.text.strip()
-		#		if not re.search(r".*:\$\{.*\}.*", p2_feature_dependency.text):
-		#			p2_feature_dependency.text = p2_feature_dependency.text + ":" + old_version
+			for p2_feature_dependency in p2_feature_dependencys:
+				p2_feature_dependency.text = p2_feature_dependency.text.strip()
+				if not re.search(r".*:\$\{.*\}.*", p2_feature_dependency.text):
+					p2_feature_dependency.text = p2_feature_dependency.text + ":" + old_version
 
-		#feature_pom.write('pom.xml')
+		feature_pom.write('pom.xml')
 		
 	def create_new_feature(self, file_path):
 		''' If the feature is released this operation will create a new feature and returen the path to the new feature. '''
