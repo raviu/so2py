@@ -29,6 +29,7 @@ import urllib, urllib2
 import re
 from lxml import etree as ET
 import xml.dom.minidom as mini
+import color
 
 __author__  ='Shafreen, RaviU'
 __version__ ='1.0.0'
@@ -355,7 +356,6 @@ class Feature:
 	        # For each dependet feature add/update the component id and version if there is any
 	        for feature_path in feacatored_dependet_set:
 
-			print feature_path
 			# See if the feature is released
 			#feature_version = self.is_released_feature_nexus(self.context, feature_path)
 
@@ -380,7 +380,7 @@ class Feature:
 	
 		params = urllib.urlencode(gav)
 		url = self.context['settings'].nexus_url + '/nexus/service/local/artifact/maven/resolve?%s' % params
-		print url
+		logging.debug(url)
 
 		try:
 			response = urllib2.urlopen(url).read()

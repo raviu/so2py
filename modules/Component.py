@@ -30,6 +30,7 @@ import urllib, urllib2
 import logging
 from lxml import etree as ET
 import xml.dom.minidom as mini
+import color
 
 __author__  ='Shafreen, RaviU'
 __version__ ='1.0.0'
@@ -226,7 +227,7 @@ class Component:
 	
 		params = urllib.urlencode(gav)
 		url = self.context['settings'].nexus_url + '/nexus/service/local/artifact/maven/resolve?%s' % params
-		print url
+		logging.debug(url)
 
 		try:
 			response = urllib2.urlopen(url).read()
