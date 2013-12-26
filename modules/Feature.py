@@ -155,8 +155,35 @@ class Feature:
 			logging.error('couldn not find the original version of feature @ {0}'.fromat(os.path.abspath('.')))
 			raise Exception()
 
-		# It seems this have no relationship to project version
-		# This to make sure version changes won't impact p2 dependency s
+		
+		# This to make sure version changes won't impact p2 dependencies. First line of defence.
+		feature_pom = ET.parse('pom.xml')
+		feature_component_dependencies = feature_pom.xpath("/p:project/p:dependencies/p:dependency", namespaces={'p': 'http://maven.apache.org/POM/4.0.0'})
+
+		for feature_component_dependency in feature_component_dependencies:
+			dependency_element = feature_component_dependency
+
+			dependency_version_element = dependency_element.find('p:version', namespaces={'p': 'http://maven.apache.org/POM/4.0.0'})
+			if dependency_version_element is None: 
+				continue
+			dependency_artifcatId_element = dependency_element.find('p:artifactId', namespaces={'p': 'http://maven.apache.org/POM/4.0.0'})
+			dependency_groupId_element = dependency_element.find('p:groupId', namespaces={'p': 'http://maven.apache.org/POM/4.0.0'})
+	
+			new_dependency_gav = '{0}:{1}:{2}'.format(dependency_groupId_element.text, dependency_artifcatId_element.text, dependency_version_element.text)
+
+			p2_feature_dependency = feature_pom.xpath("//p:includedFeatures/p:includedFeatureDef[re:match(text(), '.*{0}.*')]".format(dependency_artifcatId_element.text),\
+							namespaces={'p': 'http://maven.apache.org/POM/4.0.0', 're': 'http://exslt.org/regular-expressions'})
+			if p2_feature_dependency:
+				p2_feature_dependency[0].text = new_dependency_gav
+			else:
+				p2_feature_dependency = feature_pom.xpath("//p:bundleDef[re:match(text(), '.*{0}.*')]".format(dependency_artifcatId_element.text),\
+							namespaces={'p': 'http://maven.apache.org/POM/4.0.0', 're': 'http://exslt.org/regular-expressions'})
+				if p2_feature_dependency:
+					p2_feature_dependency[0].text = new_dependency_gav			
+						    
+		feature_pom.write('pom.xml')
+
+		# This to make sure version changes won't impact p2 dependencies. Second line of defence.
 		#feature_pom = ET.parse('pom.xml')
 
 		#p2_feature_dependencys = feature_pom.xpath("//p:includedFeatures/p:includedFeatureDef[re:match(text(), '.*\D+$')]",\
