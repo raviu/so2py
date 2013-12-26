@@ -23,7 +23,7 @@
 # SOFTWARE.
 
 __version__     = '0.0.1'
-__author__      = 'RaviU'
+__author__      = 'RaviU, Shafreen'
 
 import os
 import sys
@@ -31,6 +31,7 @@ import re
 import time
 import subprocess 
 import logging
+import color
 
 import settings
 
@@ -50,7 +51,7 @@ class Main:
 	# Setting the output console too
 	ch = logging.StreamHandler(sys.stdout)
 	ch.setLevel(logging.INFO)
-	ch.setFormatter(logging.Formatter('%(asctime)s: %(levelname)s: %(message)s'))
+	ch.setFormatter(color.ColoredFormatter('%(asctime)s: %(levelname)s: %(message)s'))
 	logging.getLogger().addHandler(ch)
 
         print "Running Managment Tools v%s" % __version__ 
