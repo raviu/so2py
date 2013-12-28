@@ -371,17 +371,19 @@ class Feature:
 			changed_paths = context['changed_paths'] 
 			changed_paths.add(os.path.abspath('.'))	
 
-        def master_method(self, component_artifact_id, component_artifact_version):
+        def master_method(self, context, component_artifact_id, component_artifact_version):
 		
 		# Find dependent featurs of the component
 		dependent_projects = set([])
 		self.find_dependent_features(component_artifact_id, dependent_projects)
 
-		# Refacator dependent feature to remove older versions. *Only* should contain the latest released versions
-		feacatored_dependet_set = self.refactor_depenedent_result(dependent_projects)
+		# Refacator dependent feature to remove older versions. 
+		refacatored_dependet_set = self.refactor_depenedent_result(dependent_projects)
+
+		self.fill_tree_dic(context, component_artifact_id, refacatored_dependet_set)
 
 	        # For each dependet feature add/update the component id and version if there is any
-	        for feature_path in feacatored_dependet_set:
+	        for feature_path in refacatored_dependet_set:
 
 			# See if the feature is released
 			#feature_version = self.is_released_feature_nexus(self.context, feature_path)
@@ -398,7 +400,7 @@ class Feature:
 			self.upate_chunk_component(self.context, feature_path)
 
 			# Recursively call the master method
-			self.master_method(feature_id_version[0], feature_id_version[1])
+			self.master_method(context, feature_id_version[0], feature_id_version[1])
 
 	def get_imidiate_new_version(self, context, file_path):
 		gav = self.get_pom_gav_coordinates(context, file_path)
@@ -425,6 +427,21 @@ class Feature:
 		except:
 			logging.error('could not create the latest imidiate version for {0}'.format(url))
 			raise Exception()
+
+	def fill_tree_dic(self, context, component_artifact_id, dependent_set):
+		dependent_artifact_ids = []
+		
+		try:
+			if dependent_set:
+				for dependent_path in dependent_set:
+					dependent_artifact_id = self.get_pom_gav_coordinates(self.context, dependent_path)['a']
+					dependent_artifact_ids.append(dependent_artifact_id)
+		
+				tree_dic = context['tree_dic']	
+				tree_dic[component_artifact_id] = dependent_artifact_ids
+		except:
+			logging.error('couldn not gather information for the dependent tree output')
+			raise 		
 	    
 	def run(self):
 		''' This the root method of the component. This method initiate the execution of the feature. Therefore by looking at this method
@@ -433,7 +450,9 @@ class Feature:
 		component_artifact_id = self.context['component_artifact_id']
 		component_artifact_version = self.context['component_artifact_version']
 
-		self.master_method(component_artifact_id, component_artifact_version)
+		self.context['tree_dic'] = {}
+
+		self.master_method(self.context, component_artifact_id, component_artifact_version)
 
 		return self.context
 
