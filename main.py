@@ -50,7 +50,7 @@ class Main:
 
 	# Setting the output console too
 	ch = logging.StreamHandler(sys.stdout)
-	ch.setLevel(logging.INFO)
+	ch.setLevel(logging.DEBUG)
 	ch.setFormatter(color.ColoredFormatter('%(asctime)s: %(levelname)s: %(message)s'))
 	logging.getLogger().addHandler(ch)
 
@@ -71,6 +71,11 @@ class Main:
 			changed_paths = self.context['changed_paths'] 
 			for path in changed_paths:
 				logging.info('change done @ {0}'.format(path))
+
+		tree_dic = self.context['tree_dic'] 
+		if tree_dic: 
+			print color.colorstr("| Associativity tree view of updated artifacts", 'DARK_BLUE')
+			self.print_tree(self.context['component_artifact_id'], tree_dic, ' ')
 
 		logging.info('management tool executed without any errors')
 	except:
@@ -125,6 +130,31 @@ class Main:
         repo_loc = repo_loc.replace('\\', '\\\\').replace(' ', '\\ ').replace('/', '\/')
         sed_string = 'sed -r -i \"s/repo_location = \'\'\#UPDATE_REPO_LOCATION/repo_location = %r' % repo_loc + '/g\" %s' % os.path.dirname(os.path.abspath(__file__)) + '/settings.py'
         subprocess.call(sed_string, shell=True) 
+
+    def print_tree(self, artifact_id, dic, padding):   
+
+	    print color.colorstr(padding[:-1] + '+-' + artifact_id, 'BLUE') 
+
+	    padding = padding + ' '
+	    files = []
+
+	    try:
+		files = dic[artifact_id]
+	    except:
+		files = []	
+
+	    count = 0
+	    for file in files:
+		count += 1
+		print color.colorstr(padding + '|', 'BLUE')
+		path = file
+		if files:
+		    if count == len(files):
+		        self.print_tree(path, dic, padding + ' ')
+		    else:
+		        self.print_tree(path, dic, padding + '|')
+		else:
+		    print color.colorstr(padding + '+-' + file, 'BLUE')
 
 path = sys.argv[1] 
 main = Main(settings, path)
