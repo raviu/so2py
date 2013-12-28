@@ -62,7 +62,8 @@ class Main:
         self.context = {'path': path, 'success': True, 'settings': settings}
 	self.path = path
 	self.settings = settings
-        self.repo_location = settings.repo_location
+        self.repo_locationrepo_location = settings.repo_location
+	self.context['repo_location'] = settings.repo_location
 
 	try:
       		self.run(settings.run_order)
