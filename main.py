@@ -80,18 +80,13 @@ class Main:
 			print color.colorstr("| Associativity tree view of updated artifacts", 'DARK_BLUE')
 			self.print_tree(self.context['component_artifact_id'], tree_dic, ' ')
 
-		logging.info('management tool executed without any errors')
-	except:
-		# Need to revert all changes done
-		if 'changed_paths' in self.context:
-			changed_paths = self.context['changed_paths'] 
-			svn_revert_command = 'svn revert --recursive {0}'
-			for path in changed_paths:
-				if os.system(svn_revert_command.format(path)) == 0:
-					logging.info('successfully reverted changes @ {0}'.format(path))
-				else:
-					logging.error('failed to revert changes @ {0}'.format(path))
+		if self.get_user_opinion() == 'n':
+			self.revert_changes()
+			logging.info('successfully reverted all the changes because user entered - n')			
 
+		logging.info('management tool executed without any errors')
+	except:	
+		self.revert_changes()
 		raise			
     
     def run(self, run_order):
@@ -107,6 +102,18 @@ class Main:
                 print "Failed to complete %s" % component + " run" 
 
 	    self.verify_map()
+
+    def revert_changes(self):
+	# Need to revert all changes done
+	if 'changed_paths' in self.context:
+		changed_paths = self.context['changed_paths'] 
+		svn_revert_command = 'svn revert --recursive {0}'
+		for path in changed_paths:
+			if os.system(svn_revert_command.format(path)) == 0:
+				logging.info('successfully reverted changes @ {0}'.format(path))
+			else:
+				logging.error('failed to revert changes @ {0}'.format(path))
+	
 
     def verify_map(self):
 	if 'path' not in self.context:
@@ -127,6 +134,18 @@ class Main:
 		else:
 			prompt = "The file path you entered is not a valid directory. Please enter file path to Carbon Platform code: "
 	return repo_loc
+
+    def get_user_opinion(self):
+        continue_loop = True
+        prompt = "Do you want to keep the changes ? [y/n] : "
+        while(continue_loop):
+                opi = raw_input(prompt)
+                if opi.lower() == 'y' or opi.lower() == 'n':
+                        continue_loop = False
+			return opi
+                else:
+                        prompt = "The option you entered is not a valid option. Please enter a valid option : "
+        return repo_loc
 
     def repoloc_wizard(self):
         repo_loc = self.get_direcotry()	
