@@ -45,7 +45,6 @@ class Main:
     def __init__(self, settings, path):
 
 	# Configuring the logging. This logging is used accross all the components
-	print os.path.abspath('.')
 	logging.basicConfig(level=logging.DEBUG, format='%(asctime)s: %(levelname)s: %(message)s', filename ='{0}/log/so2py.log'.format(os.path.abspath('.')), filemode = 'w',)
 
 	# Setting the output console too
@@ -85,7 +84,7 @@ class Main:
 			logging.info('successfully reverted all the changes because user entered - n')			
 
 		logging.info('management tool executed without any errors')
-	except:	
+	except:
 		self.revert_changes()
 		raise			
     
