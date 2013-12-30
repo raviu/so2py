@@ -45,7 +45,7 @@ class Main:
     def __init__(self, settings, path):
 
 	# Configuring the logging. This logging is used accross all the components
-	logging.basicConfig(level=logging.DEBUG, format='%(asctime)s: %(levelname)s: %(message)s', filename ='{0}/log/so2py.log'.format(os.path.abspath('.')), filemode = 'w',)
+	logging.basicConfig(level=logging.DEBUG, format='%(asctime)s: %(levelname)s: %(message)s', filename ='{0}/log/so2py.log'.format(os.path.dirname(os.path.realpath(__file__))), filemode = 'w',)
 
 	# Setting the output console too
 	ch = logging.StreamHandler(sys.stdout)
@@ -149,7 +149,7 @@ class Main:
     def repoloc_wizard(self):
         repo_loc = self.get_direcotry()	
         repo_loc = repo_loc.replace('\\', '\\\\').replace(' ', '\\ ').replace('/', '\/')
-        sed_string = 'sed -r -i \"s/repo_location = \'\' \#UPDATE_REPO_LOCATION/repo_location = %r' % repo_loc + '/g\" %s' % os.path.abspath('.') + '/settings.py'
+        sed_string = 'sed -r -i \"s/repo_location = \'\' \#UPDATE_REPO_LOCATION/repo_location = %r' % repo_loc + '/g\" %s' % os.path.dirname(os.path.realpath(__file__)) + '/settings.py'
         subprocess.call(sed_string, shell=True) 
 
     def print_tree(self, artifact_id, dic, padding):   
