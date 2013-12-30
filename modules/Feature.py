@@ -154,8 +154,35 @@ class Feature:
 		else:
 			logging.error('couldn not find the original version of feature @ {0}'.fromat(os.path.abspath('.')))
 			raise Exception()
-
 		
+		# This to make sure if dependency management has project.version 
+		feature_pom = ET.parse('pom.xml')
+		feature_component_dependencies = feature_pom.xpath("/p:project/p:dependencies/p:dependency", namespaces={'p': 'http://maven.apache.org/POM/4.0.0'})
+
+		for feature_component_dependency in feature_component_dependencies:	
+			dependency_element = feature_component_dependency
+
+			dependency_artifcatId_element = dependency_element.find('p:artifactId', namespaces={'p': 'http://maven.apache.org/POM/4.0.0'})
+			dependency_version_element = dependency_element.find('p:version', namespaces={'p': 'http://maven.apache.org/POM/4.0.0'})
+
+			if dependency_version_element is None: 
+				parent_pom_path = feature_pom.xpath("/p:project/p:parent/p:relativePath", namespaces={'p': 'http://maven.apache.org/POM/4.0.0'})
+
+				if parent_pom_path:
+					parent_pom = ET.parse(parent_pom_path[0].text)
+					dependency = parent_pom.xpath("/p:project/p:dependencyManagement/p:dependencies/p:dependency/p:artifactId[re:match(text(), '{0}')]".format(dependency_artifcatId_element.text),\
+											namespaces={'p': 'http://maven.apache.org/POM/4.0.0', 're': 'http://exslt.org/regular-expressions'})
+					if dependency:
+						dependency_element_parent = dependency[0].getparent()
+						dependency_version_element = dependency_element_parent.find('p:version', namespaces={'p': 'http://maven.apache.org/POM/4.0.0'})
+
+						if dependency_version_element is not None:
+							if dependency_version_element.text == r'${project.version}':
+								new_version_element = ET.fromstring('<version>{0}</version>'.format(old_version))
+								dependency_element.append(new_version_element)
+
+		feature_pom.write('pom.xml')
+
 		# This to make sure version changes won't impact p2 dependencies. First line of defence.
 		feature_pom = ET.parse('pom.xml')
 		feature_component_dependencies = feature_pom.xpath("/p:project/p:dependencies/p:dependency", namespaces={'p': 'http://maven.apache.org/POM/4.0.0'})
@@ -166,6 +193,7 @@ class Feature:
 			dependency_version_element = dependency_element.find('p:version', namespaces={'p': 'http://maven.apache.org/POM/4.0.0'})
 			if dependency_version_element is None: 
 				continue
+
 			dependency_artifcatId_element = dependency_element.find('p:artifactId', namespaces={'p': 'http://maven.apache.org/POM/4.0.0'})
 			dependency_groupId_element = dependency_element.find('p:groupId', namespaces={'p': 'http://maven.apache.org/POM/4.0.0'})
 	
@@ -183,7 +211,7 @@ class Feature:
 						    
 		feature_pom.write('pom.xml')
 
-		# This to make sure version changes won't impact p2 dependencies. Second line of defence. *I think this is wrong. It seems the relationship comes with dependency managment element*
+		# *below logic is wrong. its here for reference*
 		#feature_pom = ET.parse('pom.xml')
 
 		#p2_feature_dependencys = feature_pom.xpath("//p:includedFeatures/p:includedFeatureDef[re:match(text(), '.*\D+$')]",\
