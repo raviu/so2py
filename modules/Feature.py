@@ -358,10 +358,9 @@ class Feature:
 		# NEED TO FIND A BETTER WAY THAN THIS. MAY FIRST STRIP THE WHOLE POM.XML
 		p2_feature_dependency = feature_pom.xpath("//p:importFeatureDef[re:match(text(), '.*{0}:.*')]".format(dependency_artifcatId_element.text.rpartition('.')[0]),\
 						namespaces={'p': 'http://maven.apache.org/POM/4.0.0', 're': 'http://exslt.org/regular-expressions'})
+		new_dependency_gav = '{0}:{1}'.format(dependency_artifcatId_element.text.rpartition('.')[0], component_artifact_version)
 		if p2_feature_dependency:
-			p2_feature_dependency[0].text = p2_feature_dependency[0].text.strip()
-
-			new_dependency_gav = '{0}:{1}'.format(dependency_artifcatId_element.text.rpartition('.')[0], dependency_version_element.text)
+			p2_feature_dependency[0].text = p2_feature_dependency[0].text.strip()			
 			p2_feature_dependency[0].text = new_dependency_gav	
 		else:
 			p2_feature_dependency = feature_pom.xpath("//p:importFeatureDef[re:match(text(), '.*{0}$')]".format('org.wso2.carbon.transaction.manager.feature'.rpartition('.')[0]),\
@@ -369,8 +368,6 @@ class Feature:
 
 			if p2_feature_dependency:
 				p2_feature_dependency[0].text = p2_feature_dependency[0].text.strip()
-
-				new_dependency_gav = '{0}:{1}'.format('org.wso2.carbon.transaction.manager.feature'.rpartition('.')[0], '4.4.5')
 				p2_feature_dependency[0].text = new_dependency_gav
 			else:
 				p2_feature_dependency = feature_pom.xpath("//p:importFeatureDef[re:match(text(), '.*{0}\s*$')]".format('org.wso2.carbon.transaction.manager.feature'.rpartition('.')[0]),\
@@ -378,8 +375,6 @@ class Feature:
 
 				if p2_feature_dependency:
 					p2_feature_dependency[0].text = p2_feature_dependency[0].text.strip()
-
-					new_dependency_gav = '{0}:{1}'.format('org.wso2.carbon.transaction.manager.feature'.rpartition('.')[0], '4.4.5')
 					p2_feature_dependency[0].text = new_dependency_gav
 					            
 		feature_pom.write('pom.xml')
